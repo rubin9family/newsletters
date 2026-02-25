@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>The Scroll Harvester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #D3D3D3;
+            color: #333333;
+            text-align: center;
+            padding: 50px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 60%;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #D66A28;
+            color: white;
+            border: 2px solid #B71C1C;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #B71C1C;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+            padding: 10px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>The Scroll Harvester</h2>
+    <p>Enter the name of the folder in your GitHub repository (e.g., <strong>5786</strong> or <strong>Yom Tov</strong>) to instantly generate your CSV data.</p>
+    
+    <input type="text" id="folderName" placeholder="Folder Name (e.g., 5786)">
+    <br>
+    <button onclick="harvestScrolls()">Generate CSV Links</button>
+
+    <textarea id="outputArea" placeholder="Your pristine, comma-separated data will appear here. Ready for copy-pasting."></textarea>
+</div>
+
+<script>
+    function harvestScrolls() {
+        // Your specific repository details
+        const owner = "rubin9family";
+        const repo = "newsletters";
+        
+        // Grab the folder name the user typed, and fix any spaces (like in "Yom Tov")
+        let folder = document.getElementById("folderName").value.trim();
+        folder = encodeURIComponent(folder); 
+        
+        const output = document.getElementById("outputArea");
+        output.value = "Consulting the archives... Please wait.";
+
+        // The GitHub API Doorway
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${folder}`;
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Folder not found. Ensure it is spelled exactly as it is on GitHub.");
+                }
+                return response.json();
+            })
+            .then(data => {
+                let csvLines = [];
+                
+                // Sort the files alphabetically so your dropdown is neat
+                data.sort((a, b) => a.name.localeCompare(b.name));
+
+                data.forEach(file => {
+                    // Only process PDF files
+                    if (file.name.toLowerCase().endsWith('.pdf')) {
+                        // 1. Strip the ".pdf" from the name
+                        const cleanName = file.name.replace(/\.pdf$/i, '');
+                        
+                        // 2. Grab the raw download URL that bypasses the GitHub site
+                        const rawUrl = file.download_url;
+                        
+                        // Combine them with a comma
+                        csvLines.push(`${cleanName},${rawUrl}`);
+                    }
+                });
+
+                if (csvLines.length === 0) {
+                    output.value = "No PDFs found in this folder. Are they hiding?";
+                } else {
+                    // Join all the lines with a line break and display them
+                    output.value = csvLines.join('\n');
+                }
+            })
+            .catch(error => {
+                output.value = "Error: " + error.message + "\n\nDid you create the folder on GitHub yet?";
+            });
+    }
+</script>
+
+</body>
+</html>
